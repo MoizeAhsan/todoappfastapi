@@ -1,0 +1,309 @@
+networks:
+  traefik-public:
+    external: false
+services:
+  backend:
+    build:
+      args:
+        INSTALL_DEV: "true"
+      context: /home/moize/Desktop/interview/todoapp/backend
+      dockerfile: backend.dockerfile
+    depends_on:
+      db:
+        condition: service_started
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.constraint-label-stack=localhost
+      - traefik.http.routers.localhost-backend-http.rule=PathPrefix(`/api`) || PathPrefix(`/docs`)
+        || PathPrefix(`/redoc`)
+      - traefik.http.services.localhost-backend.loadbalancer.server.port=80
+    environment:
+      BACKEND_CORS_ORIGINS: '["http://localhost", "http://localhost:4200", "http://localhost:3000",
+        "http://localhost:8080", "https://localhost", "https://localhost:4200", "https://localhost:3000",
+        "https://localhost:8080", "http://dev.localhost", "https://stage.todo", "https://localhost",
+        "http://local.dockertoolbox.tiangolo.com", "http://localhost.tiangolo.com"]'
+      DOCKER_IMAGE_BACKEND: todo-appbackend
+      DOCKER_IMAGE_CELERYWORKER: todo-appceleryworker
+      DOCKER_IMAGE_FRONTEND: todo-appfrontend
+      DOMAIN: localhost
+      EMAILS_FROM_EMAIL: info@localhost.com
+      FIRST_SUPERUSER: admin@localhost.com
+      FIRST_SUPERUSER_PASSWORD: '11223344'
+      FLOWER_BASIC_AUTH: admin:11223344
+      PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+      PGADMIN_DEFAULT_PASSWORD: '11223344'
+      PGADMIN_LISTEN_PORT: '5050'
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: db
+      POSTGRES_USER: postgres
+      PROJECT_NAME: todoapp
+      SECRET_KEY: '11223344'
+      SENTRY_DSN: ''
+      SERVER_HOST: https://backend
+      SERVER_NAME: backend
+      SMTP_HOST: ''
+      SMTP_PASSWORD: ''
+      SMTP_PORT: '587'
+      SMTP_TLS: "True"
+      SMTP_USER: ''
+      STACK_NAME: localhost
+      TRAEFIK_PUBLIC_NETWORK: traefik-public
+      TRAEFIK_PUBLIC_TAG: traefik-public
+      TRAEFIK_TAG: localhost
+      USERS_OPEN_REGISTRATION: "False"
+    image: todo-appbackend:latest
+    ports:
+    - published: 8001
+      target: 80
+  celeryworker:
+    build:
+      args:
+        INSTALL_DEV: "true"
+      context: /home/moize/Desktop/interview/todoapp/backend
+      dockerfile: celeryworker.dockerfile
+    depends_on:
+      db:
+        condition: service_started
+      queue:
+        condition: service_started
+    environment:
+      BACKEND_CORS_ORIGINS: '["http://localhost", "http://localhost:4200", "http://localhost:3000",
+        "http://localhost:8080", "https://localhost", "https://localhost:4200", "https://localhost:3000",
+        "https://localhost:8080", "http://dev.localhost", "https://stage.todo", "https://localhost",
+        "http://local.dockertoolbox.tiangolo.com", "http://localhost.tiangolo.com"]'
+      DOCKER_IMAGE_BACKEND: todo-appbackend
+      DOCKER_IMAGE_CELERYWORKER: todo-appceleryworker
+      DOCKER_IMAGE_FRONTEND: todo-appfrontend
+      DOMAIN: localhost
+      EMAILS_FROM_EMAIL: info@localhost.com
+      FIRST_SUPERUSER: admin@localhost.com
+      FIRST_SUPERUSER_PASSWORD: '11223344'
+      FLOWER_BASIC_AUTH: admin:11223344
+      PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+      PGADMIN_DEFAULT_PASSWORD: '11223344'
+      PGADMIN_LISTEN_PORT: '5050'
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: db
+      POSTGRES_USER: postgres
+      PROJECT_NAME: todoapp
+      SECRET_KEY: '11223344'
+      SENTRY_DSN: ''
+      SERVER_HOST: https://backend
+      SERVER_NAME: backend
+      SMTP_HOST: ''
+      SMTP_PASSWORD: ''
+      SMTP_PORT: '587'
+      SMTP_TLS: "True"
+      SMTP_USER: ''
+      STACK_NAME: localhost
+      TRAEFIK_PUBLIC_NETWORK: traefik-public
+      TRAEFIK_PUBLIC_TAG: traefik-public
+      TRAEFIK_TAG: localhost
+      USERS_OPEN_REGISTRATION: "False"
+    image: todo-appceleryworker:latest
+  db:
+    deploy:
+      placement:
+        constraints:
+        - node.labels.localhost.app-db-data == true
+    environment:
+      BACKEND_CORS_ORIGINS: '["http://localhost", "http://localhost:4200", "http://localhost:3000",
+        "http://localhost:8080", "https://localhost", "https://localhost:4200", "https://localhost:3000",
+        "https://localhost:8080", "http://dev.localhost", "https://stage.todo", "https://localhost",
+        "http://local.dockertoolbox.tiangolo.com", "http://localhost.tiangolo.com"]'
+      DOCKER_IMAGE_BACKEND: todo-appbackend
+      DOCKER_IMAGE_CELERYWORKER: todo-appceleryworker
+      DOCKER_IMAGE_FRONTEND: todo-appfrontend
+      DOMAIN: localhost
+      EMAILS_FROM_EMAIL: info@localhost.com
+      FIRST_SUPERUSER: admin@localhost.com
+      FIRST_SUPERUSER_PASSWORD: '11223344'
+      FLOWER_BASIC_AUTH: admin:11223344
+      PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+      PGADMIN_DEFAULT_PASSWORD: '11223344'
+      PGADMIN_LISTEN_PORT: '5050'
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: db
+      POSTGRES_USER: postgres
+      PROJECT_NAME: todoapp
+      SECRET_KEY: '11223344'
+      SENTRY_DSN: ''
+      SMTP_HOST: ''
+      SMTP_PASSWORD: ''
+      SMTP_PORT: '587'
+      SMTP_TLS: "True"
+      SMTP_USER: ''
+      STACK_NAME: localhost
+      TRAEFIK_PUBLIC_NETWORK: traefik-public
+      TRAEFIK_PUBLIC_TAG: traefik-public
+      TRAEFIK_TAG: localhost
+      USERS_OPEN_REGISTRATION: "False"
+    image: postgres:12
+    volumes:
+    - app-db-data:/var/lib/postgresql/data/pgdata:rw
+  flower:
+    command:
+    - --broker=amqp://guest@queue:5672//
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.localhost-flower-http.rule=Host(`flower.backend`)
+      - traefik.http.routers.localhost-flower-http.entrypoints=http
+      - traefik.http.routers.localhost-flower-http.middlewares=localhost-https-redirect
+      - traefik.http.routers.localhost-flower-https.rule=Host(`flower.backend`)
+      - traefik.http.routers.localhost-flower-https.entrypoints=https
+      - traefik.http.routers.localhost-flower-https.tls=true
+      - traefik.http.routers.localhost-flower-https.tls.certresolver=le
+      - traefik.http.services.localhost-flower.loadbalancer.server.port=5555
+    environment:
+      BACKEND_CORS_ORIGINS: '["http://localhost", "http://localhost:4200", "http://localhost:3000",
+        "http://localhost:8080", "https://localhost", "https://localhost:4200", "https://localhost:3000",
+        "https://localhost:8080", "http://dev.localhost", "https://stage.todo", "https://localhost",
+        "http://local.dockertoolbox.tiangolo.com", "http://localhost.tiangolo.com"]'
+      DOCKER_IMAGE_BACKEND: todo-appbackend
+      DOCKER_IMAGE_CELERYWORKER: todo-appceleryworker
+      DOCKER_IMAGE_FRONTEND: todo-appfrontend
+      DOMAIN: localhost
+      EMAILS_FROM_EMAIL: info@localhost.com
+      FIRST_SUPERUSER: admin@localhost.com
+      FIRST_SUPERUSER_PASSWORD: '11223344'
+      FLOWER_BASIC_AUTH: admin:11223344
+      PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+      PGADMIN_DEFAULT_PASSWORD: '11223344'
+      PGADMIN_LISTEN_PORT: '5050'
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: db
+      POSTGRES_USER: postgres
+      PROJECT_NAME: todoapp
+      SECRET_KEY: '11223344'
+      SENTRY_DSN: ''
+      SMTP_HOST: ''
+      SMTP_PASSWORD: ''
+      SMTP_PORT: '587'
+      SMTP_TLS: "True"
+      SMTP_USER: ''
+      STACK_NAME: localhost
+      TRAEFIK_PUBLIC_NETWORK: traefik-public
+      TRAEFIK_PUBLIC_TAG: traefik-public
+      TRAEFIK_TAG: localhost
+      USERS_OPEN_REGISTRATION: "False"
+    image: mher/flower
+    networks:
+      default: null
+      traefik-public: null
+  frontend:
+    build:
+      args:
+        FRONTEND_ENV: production
+      context: /home/moize/Desktop/interview/todoapp/frontend
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.constraint-label-stack=localhost
+      - traefik.http.routers.localhost-frontend-http.rule=PathPrefix(`/`)
+      - traefik.http.services.localhost-frontend.loadbalancer.server.port=80
+    image: todo-appfrontend:latest
+  pgadmin:
+    depends_on:
+      db:
+        condition: service_started
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.localhost-pgadmin-http.rule=Host(`pgadmin.backend`)
+      - traefik.http.routers.localhost-pgadmin-http.entrypoints=http
+      - traefik.http.routers.localhost-pgadmin-http.middlewares=localhost-https-redirect
+      - traefik.http.routers.localhost-pgadmin-https.rule=Host(`pgadmin.backend`)
+      - traefik.http.routers.localhost-pgadmin-https.entrypoints=https
+      - traefik.http.routers.localhost-pgadmin-https.tls=true
+      - traefik.http.routers.localhost-pgadmin-https.tls.certresolver=le
+      - traefik.http.services.localhost-pgadmin.loadbalancer.server.port=5050
+    environment:
+      BACKEND_CORS_ORIGINS: '["http://localhost", "http://localhost:4200", "http://localhost:3000",
+        "http://localhost:8080", "https://localhost", "https://localhost:4200", "https://localhost:3000",
+        "https://localhost:8080", "http://dev.localhost", "https://stage.todo", "https://localhost",
+        "http://local.dockertoolbox.tiangolo.com", "http://localhost.tiangolo.com"]'
+      DOCKER_IMAGE_BACKEND: todo-appbackend
+      DOCKER_IMAGE_CELERYWORKER: todo-appceleryworker
+      DOCKER_IMAGE_FRONTEND: todo-appfrontend
+      DOMAIN: localhost
+      EMAILS_FROM_EMAIL: info@localhost.com
+      FIRST_SUPERUSER: admin@localhost.com
+      FIRST_SUPERUSER_PASSWORD: '11223344'
+      FLOWER_BASIC_AUTH: admin:11223344
+      PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+      PGADMIN_DEFAULT_PASSWORD: '11223344'
+      PGADMIN_LISTEN_PORT: '5050'
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: db
+      POSTGRES_USER: postgres
+      PROJECT_NAME: todoapp
+      SECRET_KEY: '11223344'
+      SENTRY_DSN: ''
+      SMTP_HOST: ''
+      SMTP_PASSWORD: ''
+      SMTP_PORT: '587'
+      SMTP_TLS: "True"
+      SMTP_USER: ''
+      STACK_NAME: localhost
+      TRAEFIK_PUBLIC_NETWORK: traefik-public
+      TRAEFIK_PUBLIC_TAG: traefik-public
+      TRAEFIK_TAG: localhost
+      USERS_OPEN_REGISTRATION: "False"
+    image: dpage/pgadmin4
+    networks:
+      default: null
+      traefik-public: null
+  proxy:
+    command:
+    - --providers.docker
+    - --providers.docker.constraints=Label(`traefik.constraint-label-stack`, `localhost`)
+    - --providers.docker.exposedbydefault=false
+    - --providers.docker.swarmmode
+    - --accesslog
+    - --log
+    - --api
+    deploy:
+      labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.middlewares.localhost-https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.localhost-https-redirect.redirectscheme.permanent=true
+      - traefik.http.routers.localhost-proxy-http.rule=Host(`backend`) || Host(`www.backend`)
+      - traefik.http.routers.localhost-proxy-http.entrypoints=http
+      - traefik.http.routers.localhost-proxy-https.rule=Host(`backend`) || Host(`www.backend`)
+      - traefik.http.routers.localhost-proxy-https.entrypoints=https
+      - traefik.http.routers.localhost-proxy-https.tls=true
+      - traefik.http.routers.localhost-proxy-https.tls.certresolver=le
+      - traefik.http.services.localhost-proxy.loadbalancer.server.port=80
+      - traefik.http.middlewares.localhost-www-redirect.redirectregex.regex=^https?://(www.)?(backend)/(.*)
+      - traefik.http.middlewares.localhost-www-redirect.redirectregex.replacement=https://backend/$${3}
+      - traefik.http.routers.localhost-proxy-https.middlewares=localhost-www-redirect
+      - traefik.http.routers.localhost-proxy-http.middlewares=localhost-www-redirect,localhost-https-redirect
+      placement:
+        constraints:
+        - node.role == manager
+    image: traefik:v2.2
+    networks:
+      default: null
+      traefik-public: null
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:rw
+  queue:
+    image: rabbitmq:3
+version: '3.3'
+volumes:
+  app-db-data: {}
+
