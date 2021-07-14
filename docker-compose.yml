@@ -139,8 +139,6 @@ services:
   
   backend:
     image: '${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}'
-    ports: 
-      - 8001:80
     depends_on:
       - db
     env_file:
