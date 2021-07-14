@@ -29,6 +29,18 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def render_item(type_, obj, autogen_context):
+    """Apply custom rendering for selected items."""
+
+    if type_ == "type" and obj.__class__.__module__.startswith("sqlalchemy_utils."):
+        autogen_context.imports.add(f"import {obj.__class__.__module__}")
+        if hasattr(obj, "choices"):
+            return f"{obj.__class__.__module__}.{obj.__class__.__name__}(choices={obj.choices})"
+        else:
+            return f"{obj.__class__.__module__}.{obj.__class__.__name__}()"
+
+    # default rendering for other objects
+    return False
 
 def get_url():
     user = os.getenv("POSTGRES_USER", "postgres")
@@ -74,9 +86,9 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True
+            connection=connection, target_metadata=target_metadata, compare_type=True,
+            render_item=render_item,
         )
-
         with context.begin_transaction():
             context.run_migrations()
 
