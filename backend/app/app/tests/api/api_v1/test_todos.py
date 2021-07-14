@@ -13,7 +13,7 @@ def test_create_todo(
     data = {"title": "Foo Todo",
             "description": "Fus Do Rah!",
             "priority": PriorityEnum.LOW,
-            "due_date": date.today(),
+            "due_date": date.today().isoformat(),
             }
     response = client.post(
         f"{settings.API_V1_STR}/todos/", headers=superuser_token_headers, json=data,
@@ -42,6 +42,6 @@ def test_read_todo(
     assert content["description"] == item.description
     assert content["id"] == item.id
     assert content["owner_id"] == item.owner_id
-    assert content['due_date'] == item.due_date
+    assert content['due_date'] == item.due_date.isoformat()
     assert content['priority'] == item.priority
     assert content['is_completed'] == item.is_completed
