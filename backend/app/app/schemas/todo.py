@@ -1,15 +1,36 @@
-from typing import Optional
+from datetime import date
+from typing import Hashable, Optional, Union
 
+import enum
 from pydantic import BaseModel
 
 
 # Shared properties
+
+class PriorityEnum(str, enum.Enum):
+    """Priority enum class.
+
+    Args:
+        str ([type]): [description]
+        enum ([type]): [description]
+        Enum ([type]): [description]
+    """
+    NONE = 'NONE'
+    LOW = 'LOW'
+    MEDIUM = 'MEDIUM'
+    HIGH = 'HIGH'
+
+
 class TodoBase(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    is_completed: Union[bool,None] = False
+    due_date: Optional[date] = None
+    priority: Optional[PriorityEnum] = PriorityEnum.NONE
+
+    # Properties to receive on item creation
 
 
-# Properties to receive on item creation
 class TodoCreate(TodoBase):
     title: str
 
